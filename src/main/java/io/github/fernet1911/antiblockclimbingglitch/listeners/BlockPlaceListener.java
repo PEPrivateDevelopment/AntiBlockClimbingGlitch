@@ -20,7 +20,6 @@ public class BlockPlaceListener implements Listener {
             Player player = event.getPlayer();
             Location location = player.getLocation();
             Block block = event.getBlock();
-            Material material = block.getType();
             BlockData data = block.getBlockData();
 
             // Do not ignore the block in the event of a double slab block creation
@@ -41,7 +40,7 @@ public class BlockPlaceListener implements Listener {
                 }
             }
 
-            block.setType(material); // Undo the block change
+            block.setBlockData(data, false); // Undo the block change
         }
     }
 
