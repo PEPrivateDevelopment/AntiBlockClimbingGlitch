@@ -6,7 +6,7 @@
 
     <groupId>io.github.fernet1911</groupId>
     <artifactId>AntiBlockClimbingGlitch</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
     <packaging>jar</packaging>
 
     <name>AntiBlockClimbingGlitch</name>
