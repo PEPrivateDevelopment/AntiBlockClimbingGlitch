@@ -27,11 +27,15 @@ public class BlockPlaceListener implements Listener {
             Location location = player.getLocation();
             BoundingBox boundingBox = player.getBoundingBox();
             Block block = event.getBlock();
-            BlockData data = block.getBlockData();
+            BlockData blockData = block.getBlockData();
 
-            // Do not ignore the block in the event of a double slab block creation
-            if (!(data instanceof Slab && ((Slab) data).getType().equals(Slab.Type.DOUBLE))) {
-                block.setType(Material.AIR, false); // Change the placed block to AIR to get an instant preview
+            // Ignore the placed block to get an instant preview
+            if (blockData instanceof Slab && ((Slab) blockData).getType().equals(Slab.Type.DOUBLE)) {
+                BlockData bd = blockData.clone();
+                ((Slab) bd).setType(Slab.Type.BOTTOM);
+                block.setBlockData(bd, false);
+            } else {
+                block.setType(Material.AIR, false);
             }
 
             /*
@@ -53,7 +57,7 @@ public class BlockPlaceListener implements Listener {
                     }
                 }
 
-                block.setBlockData(data, false); // Undo the block change
+                block.setBlockData(blockData, false); // Undo the block change
             }
         }
     }
