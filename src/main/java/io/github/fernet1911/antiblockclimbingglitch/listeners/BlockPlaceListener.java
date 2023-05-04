@@ -12,6 +12,10 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.util.NumberConversions;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class BlockPlaceListener implements Listener {
 
@@ -21,6 +25,7 @@ public class BlockPlaceListener implements Listener {
         if (event.isCancelled()) {
             Player player = event.getPlayer();
             Location location = player.getLocation();
+            BoundingBox boundingBox = player.getBoundingBox();
             Block block = event.getBlock();
             BlockData data = block.getBlockData();
 
@@ -35,33 +40,88 @@ public class BlockPlaceListener implements Listener {
              */
             double xDiff = block.getX() - location.getX();
             double zDiff = block.getZ() - location.getZ();
-            Block firstBlock = location.getBlock();
-            if ((xDiff <= 0.3 && xDiff >= -1.3) && (zDiff <= 0.3 && zDiff >= -1.3) && location.getBlockY() >= block.getY() && firstBlock.isPassable()) {
-                Block secondBlock = firstBlock.getRelative(BlockFace.DOWN);
-                if (secondBlock.isPassable()) {
-                    Block thirdBlock = secondBlock.getRelative(BlockFace.DOWN);
 
-                    // Get the height of the third block to TP the player to
-                    double y = 0;
-                    for (BoundingBox boundingBox : thirdBlock.getCollisionShape().getBoundingBoxes()) {
-                        double maxY = boundingBox.getMaxY();
-                        if (maxY > y) {
-                            y = maxY;
-                        }
+            if ((xDiff <= 0.3 && xDiff >= -1.3) && (zDiff <= 0.3 && zDiff >= -1.3) && block.getY() <= location.getBlockY()) {
+                Set<Block> firstBlocks = getFloorBlocks(location, boundingBox);
+                Set<Block> secondBlocks = new HashSet<>();
+                if (getLowerBlocks(firstBlocks, secondBlocks)) {
+                    Set<Block> thirdBlocks = new HashSet<>();
+                    if (getLowerBlocks(secondBlocks, thirdBlocks)) {
+                        // Get the height of the third block and TP the player there
+                        location.setY(location.getBlockY() - 2 + getMaxY(thirdBlocks));
+                        player.teleport(location);
                     }
-                    // Set a default height of 1 for passable blocks like AIR
-                    if (y == 0) {
-                        y = 1;
-                    }
-
-                    // TP the player to the new location
-                    location.setY(thirdBlock.getY() + y);
-                    player.teleport(location);
                 }
+
+                block.setBlockData(data, false); // Undo the block change
+            }
+        }
+    }
+
+    /**
+     * Get the set of blocks representing the "floor" the player is standing on.
+     *
+     * @param location    Location to get the "floor" from
+     * @param boundingBox BoundingBox of the player to check what blocks he's standing on
+     * @return The set of blocks the player is standing on.
+     */
+    private Set<Block> getFloorBlocks(Location location, BoundingBox boundingBox) {
+        Set<Block> floorBlocks = new HashSet<>();
+        int blx = NumberConversions.floor(boundingBox.getMinX());
+        int bgx = NumberConversions.ceil(boundingBox.getMaxX());
+        int blz = NumberConversions.floor(boundingBox.getMinZ());
+        int bgz = NumberConversions.ceil(boundingBox.getMaxZ());
+
+        for (int x = blx; x < bgx; x++) {
+            for (int z = blz; z < bgz; z++) {
+                floorBlocks.add(new Location(location.getWorld(), x, location.getY(), z).getBlock());
+            }
+        }
+
+        return floorBlocks;
+    }
+
+    /**
+     * Get the set of blocks "1 layer" below the Source. Destination is the resulting set.
+     *
+     * @param sourceBlocks      Source set
+     * @param destinationBlocks Destination set
+     * @return A boolean telling if the player is trying to climb or not. The return value must be true for the Destination set to be considered exhaustive.
+     */
+    private boolean getLowerBlocks(Set<Block> sourceBlocks, Set<Block> destinationBlocks) {
+        boolean climbing = true;
+
+        for (Block b : sourceBlocks) {
+            if (!b.isPassable()) {
+                climbing = false;
+                break;
             }
 
-            block.setBlockData(data, false); // Undo the block change
+            destinationBlocks.add(b.getRelative(BlockFace.DOWN));
         }
+
+        return climbing;
+    }
+
+    /**
+     * Get the max height of the blocks in the set.
+     *
+     * @param blocks Set of blocks to check from
+     * @return A double representing the max height of the block.
+     */
+    private double getMaxY(Set<Block> blocks) {
+        double y = 0;
+
+        for (Block b : blocks) {
+            // Get the block's max height or set a default height of 1 for passable blocks like AIR
+            double maxY = b.getCollisionShape().getBoundingBoxes().stream().mapToDouble(BoundingBox::getMaxY).max().orElse(1);
+
+            if (maxY > y) {
+                y = maxY;
+            }
+        }
+
+        return y;
     }
 
 }
