@@ -1,6 +1,6 @@
 name: AntiBlockClimbingGlitch
 version: '${project.version}'
 main: io.github.fernet1911.antiblockclimbingglitch.AntiBlockClimbingGlitch
-api-version: 1.19
+api-version: 1.17
 author: Fernet1911
 description: Fix the block climbing glitch.
